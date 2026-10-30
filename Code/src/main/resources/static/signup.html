@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create account — AdaptQ</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-card { width: 100%; max-width: 420px; }
+  .role-toggle { display: flex; gap: 10px; margin-bottom: 18px; }
+  .role-btn {
+    flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #0e1220;
+    color: var(--text-dim); cursor: pointer; font-weight: 700; text-align: center; transition: all .15s;
+  }
+  .role-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124,92,255,.12); }
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <div class="brand mb-24"><span class="brand-badge">🧠</span> AdaptQ</div>
+    <h2 style="margin-top:0;">Create your account</h2>
+    <p class="text-dim mb-24" style="font-size:14px;">Join as a student to practice, or as an admin to manage the question bank.</p>
+
+    <div class="role-toggle">
+      <div class="role-btn active" id="roleStudentBtn" onclick="selectRole('STUDENT')">🎓 Student</div>
+      <div class="role-btn" id="roleAdminBtn" onclick="selectRole('ADMIN')">🛡️ Admin</div>
+    </div>
+
+    <form id="signupForm">
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="fullName" required placeholder="e.g. Priya Sharma">
+      </div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="username" required placeholder="Choose a username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" required placeholder="At least 6 characters" minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create account</button>
+    </form>
+
+    <p class="text-dim mt-16" style="text-align:center; font-size:14px;">
+      Already have an account? <a href="/login.html" style="color: var(--accent); font-weight:600;">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  let selectedRole = "STUDENT";
+  function selectRole(role) {
+    selectedRole = role;
+    document.getElementById("roleStudentBtn").classList.toggle("active", role === "STUDENT");
+    document.getElementById("roleAdminBtn").classList.toggle("active", role === "ADMIN");
+  }
+
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true; btn.textContent = "Creating account...";
+    try {
+      const user = await Api.post("/api/auth/signup", {
+        fullName: document.getElementById("fullName").value.trim(),
+        username: document.getElementById("username").value.trim(),
+        password: document.getElementById("password").value,
+        role: selectedRole
+      });
+      Session.save(user);
+      toast("Account created! Welcome, " + user.fullName);
+      window.location.href = user.role === "ADMIN" ? "/admin.html" : "/student-home.html";
+    } catch (err) {
+      toast(err.message, "error");
+      btn.disabled = false; btn.textContent = "Create account";
+    }
+  });
+</script>
+</body>
+</html>

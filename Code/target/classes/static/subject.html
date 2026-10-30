@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choose Mode — AdaptQ</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .mode-card { padding: 30px 20px; text-align: center; }
+  .mode-emoji { font-size: 36px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <a href="/student-home.html" class="text-dim" style="font-size:14px;">← Back to Dashboard</a>
+    <h2 id="subjectTitle" class="mt-16">Loading…</h2>
+    <p class="text-dim mb-24">Pick how you'd like to practice.</p>
+
+    <div class="grid grid-3">
+      <div class="card card-hover mode-card" onclick="startMode('practice')">
+        <div class="mode-emoji">🎯</div>
+        <b>Adaptive Practice</b>
+        <p class="text-dim" style="font-size:13.5px;">One question at a time, difficulty tuned to your live skill level.</p>
+      </div>
+      <div class="card card-hover mode-card" onclick="startMode('test')">
+        <div class="mode-emoji">📝</div>
+        <b>Take a Test</b>
+        <p class="text-dim" style="font-size:13.5px;">A balanced 10-question set across topics, scored at the end.</p>
+      </div>
+      <div class="card card-hover mode-card" onclick="startMode('timeattack')">
+        <div class="mode-emoji">⚡</div>
+        <b>Time Attack</b>
+        <p class="text-dim" style="font-size:13.5px;">Rapid-fire questions in your comfort zone. Beat the clock!</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  const user = Session.requireRole("STUDENT");
+  const subject = new URLSearchParams(location.search).get("subject") || "JAVA";
+  const labels = { JAVA: "Java", PYTHON: "Python", CPP: "C++", OS: "Operating Systems", DSA: "DSA" };
+
+  renderSidebar("practice");
+  document.getElementById("subjectTitle").textContent = (labels[subject] || subject) + " — Choose a mode";
+
+  function startMode(mode) {
+    location.href = `/practice.html?subject=${subject}&mode=${mode}`;
+  }
+</script>
+</body>
+</html>

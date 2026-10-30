@@ -1,0 +1,14 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Achievements — AdaptQ</title><link rel="stylesheet" href="/css/style.css"></head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><main class="main-content">
+<div class="topbar" style="border:none;padding-top:0"><div class="brand"><span class="brand-badge">🧠</span> AdaptQ</div><div class="flex items-center gap-12"><span class="text-dim" id="userLabel"></span><button class="btn btn-ghost" onclick="logout()">Log out</button></div></div>
+
+<div class="dashboard-banner"><div class="text-dim" style="font-size:13px;font-weight:700">MILESTONES</div><h1 style="margin:5px 0">🏆 Achievements</h1><p class="text-dim">Progress badges unlock from your learning activity.</p></div>
+<div class="grid grid-3" id="achievements"></div>
+
+</main></div><script src="/js/api.js"></script><script src="/js/sidebar.js"></script><script>const user=Session.requireRole("STUDENT");renderSidebar("achievements");document.getElementById("userLabel").textContent=user.fullName;function logout(){Session.clear();location.href="/login.html"}
+Api.get(`/api/student/${user.id}/home`).then(h=>{
+ const attempts=(h.subjectStats||[]).reduce((a,x)=>a+x.attempts,0), xp=Math.round(h.xp||0), streak=h.streak||0;
+ const a=[["🌱","First Answer",attempts>=1,"Answer your first question"],["🔥","Consistency",streak>=3,`Reach a 3-day streak`],["⚡","XP Builder",xp>=100,`Earn 100 XP`],["🎯","Explorer",attempts>=10,`Complete 10 attempts`],["📚","Multi-Subject",new Set((h.subjectStats||[]).filter(x=>x.attempts>0).map(x=>x.subject)).size>=2,`Try 2 subjects`],["🚀","Momentum",attempts>=25,`Complete 25 attempts`]];
+ document.getElementById("achievements").innerHTML=a.map(x=>`<div class="card" style="opacity:${x[2]?1:.52}"><div style="font-size:38px">${x[0]}</div><h3>${x[1]} ${x[2]?"✓":"🔒"}</h3><p class="text-dim">${x[3]}</p></div>`).join("");
+}).catch(e=>toast(e.message,"error"));
+</script></body></html>

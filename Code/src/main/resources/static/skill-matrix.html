@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skill Matrix — AdaptQ</title><link rel="stylesheet" href="/css/style.css"></head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><main class="main-content">
+<div class="topbar" style="border:none;padding-top:0"><div class="brand"><span class="brand-badge">🧠</span> AdaptQ</div><div class="flex items-center gap-12"><span class="text-dim" id="userLabel"></span><button class="btn btn-ghost" onclick="logout()">Log out</button></div></div>
+
+<div class="dashboard-banner"><div class="text-dim" style="font-size:13px;font-weight:700">PERSONAL MASTERY</div><h1 style="margin:5px 0">🎯 Skill Matrix</h1><p class="text-dim">Mastery is calculated from your real answers. A subject with no attempts starts at 0%, not 50%.</p></div>
+<div class="card"><div id="matrix"></div></div>
+<div class="grid grid-2 mt-24" id="details"></div>
+
+</main></div><script src="/js/api.js"></script><script src="/js/sidebar.js"></script><script>const user=Session.requireRole("STUDENT");renderSidebar("matrix");document.getElementById("userLabel").textContent=user.fullName;function logout(){Session.clear();location.href="/login.html"}
+const labels={JAVA:"Java",PYTHON:"Python",CPP:"C++",OS:"Operating Systems",DSA:"DSA"};
+Api.get(`/api/student/${user.id}/home`).then(h=>{
+ const stats=h.subjectStats||[], m=h.skillMatrix||{};
+ document.getElementById("matrix").innerHTML=Object.keys(labels).map(k=>`<div style="margin:18px 0"><div class="flex justify-between"><b>${labels[k]}</b><b>${m[k]||0}%</b></div><div class="progress-track" style="margin-top:8px;height:14px"><div class="progress-fill" style="width:${m[k]||0}%"></div></div></div>`).join("");
+ document.getElementById("details").innerHTML=stats.map(s=>`<div class="card"><h3 style="margin-top:0">${labels[s.subject]}</h3><p class="text-dim">Completion: <b>${s.completion}%</b></p><p class="text-dim">Accuracy: <b>${s.accuracy}%</b></p><p class="text-dim">Avg time: <b>${s.averageTimeSeconds}s</b></p><p class="text-dim">Avg difficulty: <b>${s.averageDifficulty}</b></p><a class="btn btn-secondary" href="/subject.html?subject=${s.subject}">Practice ${labels[s.subject]} →</a></div>`).join("");
+}).catch(e=>toast(e.message,"error"));
+</script></body></html>

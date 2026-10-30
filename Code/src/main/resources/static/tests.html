@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tests — AdaptQ</title><link rel="stylesheet" href="/css/style.css"></head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><main class="main-content">
+<div class="topbar" style="border:none;padding-top:0"><div class="brand"><span class="brand-badge">🧠</span> AdaptQ</div><div class="flex items-center gap-12"><span class="text-dim" id="userLabel"></span><button class="btn btn-ghost" onclick="logout()">Log out</button></div></div>
+
+<div class="dashboard-banner"><div class="text-dim" style="font-size:13px;font-weight:700">ASSESSMENT MODE</div><h1 style="margin:5px 0">📝 Take a test</h1><p class="text-dim">Choose a subject. AdaptQ creates a balanced test using your current ability and question difficulty.</p></div>
+<h2>Choose subject</h2><div class="grid grid-4" id="subjects"></div>
+
+</main></div><script src="/js/api.js"></script><script src="/js/sidebar.js"></script><script>const user=Session.requireRole("STUDENT");renderSidebar("tests");document.getElementById("userLabel").textContent=user.fullName;function logout(){Session.clear();location.href="/login.html"}
+const ss=[["JAVA","☕","Java"],["PYTHON","🐍","Python"],["CPP","➕","C++"],["OS","🖥️","Operating Systems"],["DSA","🧩","DSA"]];
+document.getElementById("subjects").innerHTML=ss.map(s=>`<div class="card card-hover subject-card" onclick="location.href='/practice.html?subject=${s[0]}&mode=test'"><div class="subject-emoji">${s[1]}</div><b>${s[2]}</b><p class="text-dim" style="font-size:13px">10-question adaptive assessment</p><button class="btn btn-primary">Start test →</button></div>`).join("");
+</script></body></html>

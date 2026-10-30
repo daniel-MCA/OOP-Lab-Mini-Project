@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AdaptQ — Adaptive Learning Platform</title><link rel="stylesheet" href="/css/style.css"></head>
+<body>
+<nav class="landing-nav"><a class="brand" href="/"><span class="brand-badge">🧠</span> AdaptQ</a><div class="landing-links"><a href="#how">How it works</a><a href="#features">Features</a><a href="#preview">Dashboard</a><a href="/login.html" class="nav-login">Sign in</a></div></nav>
+<div class="container">
+<section class="hero"><div class="text-dim" style="font-size:13px;font-weight:800;letter-spacing:.12em">SELF-CALIBRATING QUESTION BANK</div>
+<h1>Every answer makes your <span class="gradient-text">next question smarter.</span></h1>
+<p>AdaptQ combines adaptive difficulty, response-time analytics, skill tracking and personalized practice in one clean learning experience.</p>
+<div class="cta-row"><a href="/signup.html" class="btn btn-primary">Create your account →</a><a href="#how" class="btn btn-secondary">▶ See how it works</a></div></section>
+
+<section id="how" class="section"><div class="section-title"><div class="text-dim" style="font-size:13px;font-weight:800">HOW IT WORKS</div><h2>See the learning engine adapt in real time.</h2><p>Answer → analyze → recalibrate → recommend.</p></div>
+<div class="demo-shell"><div id="steps" class="grid">
+<div class="demo-step active" onclick="demo(0)"><div class="step-num">1</div><b>Answer</b><p class="text-dim">Your answer and time taken are captured.</p></div>
+<div class="demo-step" onclick="demo(1)"><div class="step-num">2</div><b>Analyze</b><p class="text-dim">Accuracy, speed and topic performance are evaluated.</p></div>
+<div class="demo-step" onclick="demo(2)"><div class="step-num">3</div><b>Calibrate</b><p class="text-dim">Learner ability and question difficulty update.</p></div>
+<div class="demo-step" onclick="demo(3)"><div class="step-num">4</div><b>Recommend</b><p class="text-dim">The next question is selected for your current skill.</p></div></div>
+<div class="demo-preview"><div class="preview-bar"><span>AdaptQ / Student Home</span><span>LIVE ENGINE</span></div><div class="preview-card"><small id="demoTitle">QUESTION ANSWERED</small><h2 id="demoBig">Correct · 18.4s</h2><p id="demoText" style="color:#cdd7eb">Response captured and ready for analysis.</p></div><div class="preview-card"><small>LEARNING PROFILE</small><div class="preview-bars"><div style="width:82%"></div><div style="width:64%"></div><div style="width:48%"></div></div><p id="demoMetric" style="color:#cdd7eb;margin:0">Java 82% · Python 64% · DSA 48%</p></div></div></div></section>
+
+<section id="preview" class="section"><div class="section-title"><div class="text-dim" style="font-size:13px;font-weight:800">DASHBOARD PREVIEW</div><h2>One place for your complete learning picture.</h2><p>Progress, accuracy, speed and difficulty are visible instead of hidden behind static scores.</p></div>
+<div class="grid grid-3"><div class="card"><div style="font-size:28px">📊</div><h3>Performance graphs</h3><p class="text-dim">Compare accuracy and average response time across subjects.</p></div><div class="card"><div style="font-size:28px">🎯</div><h3>Subject mastery</h3><p class="text-dim">Each subject has its own real progress based on your attempts.</p></div><div class="card"><div style="font-size:28px">🧠</div><h3>Adaptive practice</h3><p class="text-dim">Difficulty responds to your evolving ability.</p></div></div></section>
+
+<section id="features" class="section"><div class="section-title"><div class="text-dim" style="font-size:13px;font-weight:800">CORE FEATURES</div><h2>Built like a modern learning product.</h2></div>
+<div class="grid grid-4"><div class="card"><b>📚 Adaptive Practice</b><p class="text-dim">Targeted questions.</p></div><div class="card"><b>⚡ Time Attack</b><p class="text-dim">Speed-focused rounds.</p></div><div class="card"><b>🏆 XP & Achievements</b><p class="text-dim">Milestones and streaks.</p></div><div class="card"><b>🚨 Question Health</b><p class="text-dim">Automatic anomaly detection.</p></div></div></section>
+<footer>AdaptQ · Self-Calibrating Question Bank Engine</footer></div>
+<script>
+const d=[["QUESTION ANSWERED","Correct · 18.4s","Response captured and ready for analysis.","Java 82% · Python 64% · DSA 48%"],["RESPONSE ANALYSIS","Accuracy + speed + topic","The engine evaluates how the answer fits your current profile.","Accuracy 82% · Speed 18.4s"],["CALIBRATION","Difficulty 1.32 → 1.39","The question and learner ability are recalibrated.","Ability +0.18 · Difficulty +0.07"],["NEXT RECOMMENDATION","Next question selected","A question is selected near your current skill edge.","Recommended difficulty 1.41"]];
+function demo(i){document.querySelectorAll(".demo-step").forEach((x,n)=>x.classList.toggle("active",n===i));document.getElementById("demoTitle").textContent=d[i][0];document.getElementById("demoBig").textContent=d[i][1];document.getElementById("demoText").textContent=d[i][2];document.getElementById("demoMetric").textContent=d[i][3]}
+let di=0;setInterval(()=>{demo(di);di=(di+1)%4},3000);
+</script></body></html>

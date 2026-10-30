@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice — AdaptQ</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .practice-wrap { max-width: 720px; margin: 0 auto; }
+  .top-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .timer { font-weight: 800; font-size: 20px; color: var(--accent-2); }
+  .option-btn {
+    display: block; width: 100%; text-align: left; padding: 16px 18px; margin-bottom: 12px;
+    border-radius: 12px; border: 1px solid var(--border); background: #f7f9fd; color: var(--text);
+    font-size: 15px; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .option-btn:hover { border-color: var(--accent); }
+  .option-btn.correct { border-color: var(--success); background: rgba(52,211,153,.12); }
+  .option-btn.incorrect { border-color: var(--danger); background: rgba(248,113,113,.12); }
+  .option-btn:disabled { cursor: default; }
+  .qtext { font-size: 19px; font-weight: 600; margin-bottom: 22px; line-height: 1.5; }
+  .explain-box { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: #f6f8fc; border: 1px solid var(--border); font-size: 14px; color: var(--text-dim); }
+  .answer-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .answer-metrics span{background:#f5f7fb;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--text-dim)}
+  .result-wrap { text-align: center; padding: 40px 20px; }
+  .result-score { font-size: 52px; font-weight: 900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <div class="practice-wrap">
+      <div class="top-meta">
+        <a href="javascript:history.back()" class="text-dim" style="font-size:14px;">← Exit</a>
+        <div id="progressLabel" class="text-dim" style="font-size:14px;"></div>
+        <div class="timer" id="timerLabel"></div>
+      </div>
+
+      <div id="content"><div class="card" style="text-align:center;"><div class="spinner" style="margin: 20px auto;"></div>Loading question…</div></div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  const user = Session.requireRole("STUDENT");
+  const params = new URLSearchParams(location.search);
+  const subject = params.get("subject") || "JAVA";
+  const topic = params.get("topic") || ""; // optional: focus practice on one topic (from the recommendation engine)
+  const mode = params.get("mode") || "practice"; // practice | test | timeattack
+  const modeApi = mode === "test" ? "TEST" : mode === "timeattack" ? "TIME_ATTACK" : "PRACTICE";
+
+  renderSidebar("practice");
+
+  let queue = [];        // question objects for test/timeattack
+  let qIndex = 0;
+  let testAttemptId = null;
+  let seenIds = [];
+  let correctCount = 0;
+  let totalCount = 0;
+  let questionStartTime = 0;
+  let timerInterval = null;
+  let timeRemaining = 0; // for time attack
+
+  const TIME_ATTACK_SECONDS_PER_Q = 20;
+
+  async function init() {
+    if (modeApi === "PRACTICE") {
+      document.getElementById("progressLabel").textContent = topic ? `Focused practice: ${topic}` : "Adaptive Practice";
+      await loadNextAdaptive();
+    } else {
+      document.getElementById("progressLabel").textContent = modeApi === "TEST" ? "Test in progress" : "Time Attack";
+      const count = modeApi === "TEST" ? 10 : 8;
+      const composed = await Api.post(`/api/practice/compose?userId=${user.id}&subject=${subject}&count=${count}&mode=${modeApi}`);
+      testAttemptId = composed.testAttemptId;
+      queue = composed.questions;
+      if (queue.length === 0) {
+        renderEmpty();
+        return;
+      }
+      renderQuestion(queue[0]);
+    }
+  }
+
+  async function loadNextAdaptive() {
+    const excl = seenIds.join(",");
+    const topicParam = topic ? `&topic=${encodeURIComponent(topic)}` : "";
+    const q = await Api.get(`/api/practice/next?userId=${user.id}&subject=${subject}${topicParam}${excl ? "&excludeIds=" + excl : ""}`);
+    if (!q) { renderEmpty(); return; }
+    renderQuestion(q);
+  }
+
+  function renderEmpty() {
+    document.getElementById("content").innerHTML = `<div class="empty-state">No questions available yet for this subject. Ask your admin to add some in the Admin Center.</div>`;
+  }
+
+  function startTimerIfNeeded() {
+    clearInterval(timerInterval);
+    if (modeApi !== "TIME_ATTACK") { document.getElementById("timerLabel").textContent = ""; return; }
+    timeRemaining = TIME_ATTACK_SECONDS_PER_Q;
+    document.getElementById("timerLabel").textContent = "⏱ " + timeRemaining + "s";
+    timerInterval = setInterval(() => {
+      timeRemaining--;
+      document.getElementById("timerLabel").textContent = "⏱ " + timeRemaining + "s";
+      if (timeRemaining <= 0) {
+        clearInterval(timerInterval);
+        submitAnswer(null); // time's up, count as wrong
+      }
+    }, 1000);
+  }
+
+  function renderQuestion(q) {
+    questionStartTime = Date.now();
+    startTimerIfNeeded();
+
+    if (modeApi !== "PRACTICE") {
+      document.getElementById("progressLabel").textContent = `Question ${qIndex + 1} / ${queue.length}`;
+    }
+
+    const badgeClass = q.difficultyLabel === "Easy" ? "badge-easy" : q.difficultyLabel === "Hard" ? "badge-hard" : "badge-medium";
+
+    document.getElementById("content").innerHTML = `
+      <div class="card">
+        <span class="badge ${badgeClass}">${q.difficultyLabel}</span>
+        <span class="badge badge-neutral" style="margin-left:6px;">${escapeHtml(q.topic)}</span>
+        <div class="qtext mt-16">${escapeHtml(q.questionText)}</div>
+        <div id="options">
+          ${["A","B","C","D"].map(letter => `
+            <button class="option-btn" data-letter="${letter}" onclick="submitAnswer('${letter}')">
+              <b>${letter}.</b> ${escapeHtml(q["option" + letter])}
+            </button>
+          `).join("")}
+        </div>
+        <div id="explainBox"></div>
+        <div id="nextBtnWrap" class="mt-16" style="display:none;">
+          <button class="btn btn-primary" onclick="advance()">Next →</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("content").dataset.qid = q.id;
+  }
+
+  async function submitAnswer(letter) {
+    clearInterval(timerInterval);
+    document.querySelectorAll(".option-btn").forEach(b => b.disabled = true);
+
+    const qid = parseInt(document.getElementById("content").dataset.qid);
+    const timeTaken = Date.now() - questionStartTime;
+
+    let result;
+    try {
+      result = await Api.post("/api/practice/submit", {
+        userId: user.id,
+        questionId: qid,
+        selectedOption: letter || "",
+        timeTakenMs: timeTaken,
+        mode: modeApi,
+        testAttemptId: testAttemptId
+      });
+    } catch (err) {
+      toast(err.message, "error");
+      return;
+    }
+
+    totalCount++;
+    seenIds.push(qid);
+
+    const isExam = modeApi === "TEST";
+
+    if (isExam) {
+      // Exam mode: no correctness, no correct-answer highlight, no
+      // explanation, no live difficulty reveal. Just confirm the answer
+      // was recorded and let them move on — everything is shown together
+      // in the report after the exam is finished.
+      document.getElementById("timerLabel").textContent = "Answer recorded";
+      const meta = document.createElement("div");
+      meta.className = "answer-metrics";
+      const seconds = (timeTaken / 1000).toFixed(1);
+      meta.innerHTML = `<span>⏱ <b>${seconds}s</b> taken</span>`;
+      document.getElementById("explainBox").before(meta);
+      document.getElementById("nextBtnWrap").style.display = "block";
+      return;
+    }
+
+    if (result.correct) correctCount++;
+
+    // Visual feedback (practice / time-attack only)
+    document.querySelectorAll(".option-btn").forEach(b => {
+      if (b.dataset.letter === result.correctOption) b.classList.add("correct");
+      else if (b.dataset.letter === letter && !result.correct) b.classList.add("incorrect");
+    });
+
+    if (result.explanation) {
+      document.getElementById("explainBox").innerHTML = `<div class="explain-box">💡 ${escapeHtml(result.explanation)}</div>`;
+    }
+    document.getElementById("nextBtnWrap").style.display = "block";
+    document.getElementById("timerLabel").textContent = result.correct ? "✅ Correct" : "❌ Incorrect";
+    const seconds = (timeTaken / 1000).toFixed(1);
+    const meta = document.createElement("div");
+    meta.className = "answer-metrics";
+    meta.innerHTML = `<span>⏱ <b>${seconds}s</b> taken</span><span>🎯 Accuracy: <b>${result.correct ? "Correct" : "Incorrect"}</b></span><span>📈 Difficulty: <b>${Number(result.newDifficulty ?? 0).toFixed(2)}</b></span>`;
+    document.getElementById("explainBox").before(meta);
+  }
+
+  async function advance() {
+    if (modeApi === "PRACTICE") {
+      if (seenIds.length >= 15) { showResults(); return; }
+      document.getElementById("content").innerHTML = `<div class="card" style="text-align:center;"><div class="spinner" style="margin:20px auto;"></div></div>`;
+      await loadNextAdaptive();
+    } else {
+      qIndex++;
+      if (qIndex >= queue.length) {
+        await Api.post(`/api/practice/${testAttemptId}/finish`);
+        if (modeApi === "TEST") {
+          // Exam finished: everything (correct answers, explanations,
+          // difficulty, time) is revealed together on the report page —
+          // never during the exam itself.
+          location.href = `/report.html?attemptId=${testAttemptId}`;
+        } else {
+          showResults();
+        }
+      } else {
+        renderQuestion(queue[qIndex]);
+      }
+    }
+  }
+
+  function showResults() {
+    clearInterval(timerInterval);
+    const pct = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
+    document.getElementById("progressLabel").textContent = "Done!";
+    document.getElementById("timerLabel").textContent = "";
+    document.getElementById("content").innerHTML = `
+      <div class="card result-wrap">
+        <div class="result-score">${pct}%</div>
+        <p class="text-dim">${correctCount} of ${totalCount} correct</p>
+        <div class="flex gap-12 mt-24" style="justify-content:center;">
+          <button class="btn btn-primary" onclick="location.href='/subject.html?subject=${subject}'">Practice again</button>
+          <button class="btn btn-secondary" onclick="location.href='/student-home.html'">Back to Dashboard</button>
+        </div>
+      </div>
+    `;
+  }
+
+  init();
+</script>
+</body>
+</html>

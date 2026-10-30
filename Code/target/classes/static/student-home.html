@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — AdaptQ</title><link rel="stylesheet" href="/css/style.css">
+</head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside>
+<main class="main-content">
+  <div class="topbar" style="border:none;padding-top:0"><div class="brand"><span class="brand-badge">🧠</span> AdaptQ</div>
+    <div class="flex items-center gap-12"><span class="text-dim" id="userLabel"></span><button class="btn btn-ghost" onclick="logout()">Log out</button></div>
+  </div>
+
+  <section class="dashboard-banner">
+    <div class="flex justify-between items-center" style="gap:20px;flex-wrap:wrap">
+      <div><div class="text-dim" style="font-size:13px;font-weight:700">LEARNING OVERVIEW</div>
+        <h1 id="greeting" style="margin:5px 0 6px;font-size:29px">Loading…</h1>
+        <p class="text-dim" style="margin:0">Your learning data changes as you practice. Pick a subject and keep building mastery.</p>
+      </div>
+      <a class="btn btn-primary" href="/subject.html?subject=JAVA">Continue learning →</a>
+    </div>
+    <div class="metric-grid" style="margin-top:20px">
+      <div class="metric"><span class="text-dim">🔥 Streak</span><strong id="streakVal">0</strong><small class="text-dim">days active</small></div>
+      <div class="metric"><span class="text-dim">⚡ XP</span><strong id="xpVal">0</strong><small class="text-dim">earned through answers</small></div>
+      <div class="metric"><span class="text-dim">🎯 Questions</span><strong id="attemptVal">0</strong><small class="text-dim">attempts recorded</small></div>
+    </div>
+  </section>
+
+  <div class="flex justify-between items-center mb-16"><div><h2 style="margin:0">Choose a subject</h2><p class="text-dim" style="margin:4px 0">Each subject has its own progress and calibration.</p></div></div>
+  <div class="grid grid-4 mb-24" id="subjectGrid"></div>
+
+  <div class="card mb-24" id="recoCard">
+    <div class="chart-title"><h3>🎯 Recommended for you</h3><span class="text-dim">auto-updates as you practice</span></div>
+    <p class="text-dim" style="margin:2px 0 16px;font-size:13.5px;">Built from your real answers — not a generic "study Java", but exactly which topic, which difficulty, and which questions.</p>
+    <div id="recoList">Loading…</div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card chart-card"><div class="chart-title"><h3>📊 Accuracy by subject</h3><span class="text-dim">live</span></div><div id="accuracyChart" class="chart-area"></div></div>
+    <div class="card chart-card"><div class="chart-title"><h3>⏱ Average time</h3><span class="text-dim">seconds / answer</span></div><div id="timeChart" class="chart-area"></div></div>
+  </div>
+
+  <div class="grid grid-2 mt-24">
+    <div class="card"><div class="chart-title"><h3>🎯 Skill Matrix</h3><a href="/skill-matrix.html" class="text-dim">Open full view →</a></div><div id="skillMatrix"></div></div>
+    <div class="card"><div class="chart-title"><h3>📈 Difficulty exposure</h3><span class="text-dim">your attempts</span></div><div id="difficultyChart" class="chart-area"></div></div>
+  </div>
+
+  <div class="card mt-24"><div class="chart-title"><h3>🕘 Recent activity</h3><a href="/practice.html?subject=JAVA&mode=practice">Practice →</a></div><div id="recentActivity" class="text-dim">Loading…</div></div>
+</main></div>
+<script src="/js/api.js"></script><script src="/js/sidebar.js"></script>
+<script>
+const user=Session.requireRole("STUDENT");
+const subjects=[
+ {code:"JAVA",label:"Java",emoji:"☕"},{code:"PYTHON",label:"Python",emoji:"🐍"},
+ {code:"CPP",label:"C++",emoji:"➕"},{code:"OS",label:"Operating Systems",emoji:"🖥️"},{code:"DSA",label:"DSA",emoji:"🧩"}];
+const labels=Object.fromEntries(subjects.map(s=>[s.code,s.label]));
+function logout(){Session.clear();location.href="/login.html"}
+function greeting(){let h=new Date().getHours();return h<12?"Good morning":h<18?"Good afternoon":"Good evening"}
+function renderBars(elId,data,valueKey,maxValue,suffix,klass){
+ const el=document.getElementById(elId);
+ el.innerHTML=data.map(d=>{let v=Number(d[valueKey]||0);let h=maxValue?Math.max(4,Math.min(100,v/maxValue*100)):0;
+ return `<div class="bar-col"><div class="bar-value">${Math.round(v*10)/10}${suffix}</div><div class="bar ${klass||""}" style="height:${h}%"></div><div class="bar-label">${labels[d.subject]||d.subject}</div></div>`}).join("");
+}
+async function load(){
+ renderSidebar("overview");document.getElementById("userLabel").textContent=user.fullName;
+ document.getElementById("greeting").textContent=`${greeting()}, ${user.fullName.split(" ")[0]} 👋`;
+ document.getElementById("subjectGrid").innerHTML=subjects.map(s=>`
+  <div class="card card-hover subject-card" onclick="location.href='/subject.html?subject=${s.code}'">
+   <div class="subject-emoji">${s.emoji}</div><b>${s.label}</b>
+   <div class="text-dim" style="font-size:12px;margin-top:6px" id="prog-${s.code}">0% completed</div>
+   <div class="progress-track" style="margin-top:10px"><div id="bar-${s.code}" class="progress-fill" style="width:0%"></div></div>
+  </div>`).join("");
+ try{
+  const home=await Api.get(`/api/student/${user.id}/home`);
+  document.getElementById("streakVal").textContent=home.streak;
+  document.getElementById("xpVal").textContent=Math.round(home.xp);
+  const stats=home.subjectStats||[];
+  document.getElementById("attemptVal").textContent=stats.reduce((a,x)=>a+x.attempts,0);
+  stats.forEach(s=>{document.getElementById("prog-"+s.subject).textContent=`${s.completion}% completed · ${s.accuracy}% accuracy`;document.getElementById("bar-"+s.subject).style.width=s.completion+"%"});
+  renderBars("accuracyChart",stats,"accuracy",100,"%","");
+  const maxTime=Math.max(20,...stats.map(x=>x.averageTimeSeconds));
+  renderBars("timeChart",stats,"averageTimeSeconds",maxTime,"s","teal");
+  renderBars("difficultyChart",stats,"averageDifficulty",2,"","blue");
+  const matrix=home.skillMatrix||{};
+  document.getElementById("skillMatrix").innerHTML=subjects.map(s=>`<div class="skill-row"><div class="skill-name">${s.emoji} ${s.label}</div><div class="progress-track" style="flex:1"><div class="progress-fill" style="width:${matrix[s.code]||0}%"></div></div><div class="skill-pct">${matrix[s.code]||0}%</div></div>`).join("");
+  const recent=home.recentAttempts||[];
+  document.getElementById("recentActivity").innerHTML=recent.length?recent.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)"><span><b>${labels[r.subject]||r.subject}</b> · ${escapeHtml(r.topic)}</span><span>${r.correct?"✅":"❌"} ${r.timeSeconds}s · difficulty ${r.difficulty}</span></div>`).join(""):`<div class="empty-state">No attempts yet. Start practicing to create your analytics.</div>`;
+  renderRecommendations(home.recommendations || {});
+ }catch(e){toast(e.message,"error")}
+}
+
+function renderRecommendations(reco){
+ const el = document.getElementById("recoList");
+ const weak = reco.weak || [], developing = reco.developing || [], unseen = reco.unseen || [], strong = reco.strong || [];
+ // Priority order: weak topics first (most urgent), then untouched topics, then developing ones.
+ const priority = [...weak, ...unseen, ...developing].slice(0, 6);
+
+ if (priority.length === 0) {
+   el.innerHTML = strong.length
+     ? `<p class="text-dim">🟢 Every topic you've tried so far is Strong. Try a new subject, or take a full test to confirm mastery.</p>`
+     : `<div class="empty-state">Answer a few questions to unlock personalized recommendations.</div>`;
+   return;
+ }
+
+ const rowsHtml = priority.map(item => {
+   const badgeClass = item.status === "WEAK" ? "badge-hard" : item.status === "UNSEEN" ? "badge-neutral" : "badge-medium";
+   const accuracyText = item.status === "UNSEEN" ? "Not attempted yet" : `${item.accuracy}% accuracy over ${item.attempts} attempts`;
+   const questions = (item.recommendedQuestions || []).map(q =>
+     `<div style="font-size:12.5px;color:var(--text-dim);padding:4px 0;">• ${escapeHtml(q.questionText.slice(0,80))}${q.questionText.length>80?"…":""} <i>(${q.difficultyLabel})</i></div>`
+   ).join("");
+
+   return `
+     <div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+       <div class="flex justify-between items-center" style="gap:10px;flex-wrap:wrap;">
+         <div><b>${labels[item.subject]||item.subject}</b> → <b>${escapeHtml(item.topic)}</b></div>
+         <span class="badge ${badgeClass}">${item.statusLabel}</span>
+       </div>
+       <div class="text-dim" style="font-size:12.5px;margin-top:4px;">${accuracyText} · target difficulty: <b>${item.recommendedDifficultyLabel}</b></div>
+       ${questions ? `<div style="margin-top:8px;">${questions}</div>` : ""}
+       <a class="btn btn-secondary" style="margin-top:10px;padding:8px 14px;font-size:13px;"
+          href="/practice.html?subject=${item.subject}&topic=${encodeURIComponent(item.topic)}&mode=practice">
+          Practice ${escapeHtml(item.topic)} →
+       </a>
+     </div>
+   `;
+ }).join("");
+
+ el.innerHTML = rowsHtml;
+}
+load();
+</script></body></html>

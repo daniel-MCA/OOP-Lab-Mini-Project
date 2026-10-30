@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings — AdaptQ</title><link rel="stylesheet" href="/css/style.css"></head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><main class="main-content">
+<div class="topbar" style="border:none;padding-top:0"><div class="brand"><span class="brand-badge">🧠</span> AdaptQ</div><div class="flex items-center gap-12"><span class="text-dim" id="userLabel"></span><button class="btn btn-ghost" onclick="logout()">Log out</button></div></div>
+
+<div class="dashboard-banner"><div class="text-dim" style="font-size:13px;font-weight:700">ACCOUNT</div><h1 style="margin:5px 0">⚙️ Settings</h1><p class="text-dim">Manage your local learning preferences.</p></div>
+<div class="grid grid-2"><div class="card"><h3>Profile</h3><p><b>Name:</b> <span id="name"></span></p><p><b>Username:</b> <span id="username"></span></p><p><b>Role:</b> Learner</p></div>
+<div class="card"><h3>Learning preferences</h3><label style="display:flex;gap:10px;align-items:center;margin:15px 0"><input id="animations" type="checkbox" checked> Enable animations</label><label style="display:flex;gap:10px;align-items:center"><input id="tips" type="checkbox" checked> Show learning tips</label><button class="btn btn-primary mt-24" onclick="save()">Save preferences</button></div></div>
+
+</main></div><script src="/js/api.js"></script><script src="/js/sidebar.js"></script><script>const user=Session.requireRole("STUDENT");renderSidebar("settings");document.getElementById("userLabel").textContent=user.fullName;function logout(){Session.clear();location.href="/login.html"}
+document.getElementById("name").textContent=user.fullName;document.getElementById("username").textContent=user.username;
+function save(){localStorage.setItem("adaptq_prefs",JSON.stringify({animations:document.getElementById("animations").checked,tips:document.getElementById("tips").checked}));toast("Preferences saved");}
+</script></body></html>
